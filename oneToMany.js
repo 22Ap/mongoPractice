@@ -59,9 +59,22 @@ const customerSchema = new mongoose.Schema({
         type:String
     },
     orders:[{
-        type:mongoose.Schema.Types.ObjectId,    //lnking order schema with customer schema
+        type:mongoose.Schema.Types.ObjectId,    //linking order schema with customer schema
         ref: "Order"
     }]
+});
+
+//pre middleware
+customerSchema.pre('findOneAndDelete', async function(){
+    console.log('this middleware is called before query execution')
+});
+
+//post middleware
+customerSchema.post('findOneAndDelete', async function(customer){
+    if(customer.orders.length){
+        let res = await Order.deleteMany({_id: {$in: customer.orders}});
+        console.log(res);
+    }
 });
 
 const Order = mongoose.model("Order", orderSchema);
@@ -69,36 +82,32 @@ const Customer = mongoose.model("Customer", customerSchema);
 
 const addOrders = async () => {
     let res = await Order.insertMany([
-        {item: "samosa", price: 30, quantity: 2},
-        {item: "kachodi", price: 40, quantity: 2},
-        {item: "aloo parantha", price: 70, quantity: 1},
-        {item: "cold drink", price: 60, quantity: 3}
-    ]);
+        {item: "thepla", price: 30, quantity: 2},
+        {item: "lassi", price: 40, quantity: 1}
+    ])
     console.log(res);
 };
 
-addOrders();
+//addOrders();
 
 
 const addCustomer = async () => {
     let customer1 = new Customer({
-        name: "Anupam",
-        email: "Anupam@gmail.com",
+        name: "bomgesh",
+        email: "bomgesh@gmail.com",
 
     });
 
-    let order1 = await Order.findOne({item: "samosa"});
-    let order2 = await Order.findOne({item: "kachodi"});
-    let order3 = await Order.findOne({item: "aloo parantha"});
-    let order4 = await Order.findOne({item: "cold drink"});
+    let order1 = await Order.findOne({item: "thepla"});
+    let order2 = await Order.findOne({item: "lassi"});
 
-    customer1.orders.push(order1, order2, order3, order4);
+    customer1.orders.push(order1, order2);
 
     let result= await customer1.save();
     console.log(result);
 };
 
-addCustomer();
+//addCustomer();
 
 //finding customers
 const findCustomers = async () => {
@@ -107,7 +116,7 @@ const findCustomers = async () => {
 };
 
 //abhi sirf sare orders ka objectId aayega but order details nahi aayega
-findCustomers();
+//findCustomers();
 
 //jab hum populate use krenge to order objects aayega id ki jagah, details ke liye object ko stringify kr skte hai
 const findCustomers1 = async () => {
@@ -133,5 +142,27 @@ const findCustomers3 = async () => {
         });
     });
 };
-findCustomers3();
+//findCustomers3();
 
+
+//delete customers, aise delete krne se bas customer delete hoga orders nhi
+const delCustomer = async ()=>{
+    let result = await Customer.deleteOne({name: "bomgesh"});
+    console.log(result);
+}
+//delCustomer();
+
+
+/*
+findByIdAndDelete internally calls findOneAndDelete middleware
+now suppose if we define one more middleware for findOneAndDelete then if we call either 
+findByIdandDelete or findOneAndDelete ultimately that middleware is going to be called
+*/
+
+//this deletes customer and orders
+const delCustomer1 = async ()=>{
+    let result = await Customer.findOneAndDelete({name: "bomgesh"});
+    // we can also use findByIdAndDelete if we wanna delete by id instead of name
+    console.log(result);
+}
+delCustomer1();
